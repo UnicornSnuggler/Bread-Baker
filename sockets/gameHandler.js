@@ -69,9 +69,9 @@ module.exports = (io) => {
       globalBreadCount = state.breadCount;
 
       // 2. Load ALL users into local cache memory
-      const allUsers = await User.find({}, 'bakerName breadBaked').lean();
+      const allUsers = await User.find({}, 'bakerName stats.breadBakedAllTime').lean();
       allUsers.forEach((user) => {
-        cache.leaderboard[user.bakerName] = user.breadBaked || 0;
+        cache.leaderboard[user.bakerName] = user.stats.breadBakedAllTime || 0;
       });
       
       console.log(`Loaded ${allUsers.length} bakers into memory cache.`);
@@ -105,7 +105,7 @@ module.exports = (io) => {
           return {
             updateOne: {
               filter: { bakerName },
-              update: { $inc: { breadBaked: clicks } }
+              update: { $inc: { 'stats.breadBakedAllTime': clicks } }
             }
           };
         });
@@ -147,14 +147,14 @@ module.exports = (io) => {
 
       const user = await User.findOneAndUpdate(
         { bakerName: name },
-        { $set: { lastSeen: new Date() } },
+        { $set: { 'stats.lastSeen': new Date() } },
         { upsert: true, returnDocument: 'after' }
       );
 
-      cache.leaderboard[name] = user.breadBaked || cache.leaderboard[name] || 0;
+      cache.leaderboard[name] = user.stats.breadBakedAllTime || cache.leaderboard[name] || 0;
 
       // Emit success
-      socket.emit('auth:success', { bakerName: user.bakerName, userBreadBaked: user.breadBaked });
+      socket.emit('auth:success', { bakerName: user.bakerName, userBreadBaked: user.stats.breadBakedAllTime });
       io.emit('leaderboard:update', getTopTenLeaderboard());
     });
 

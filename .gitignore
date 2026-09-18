@@ -144,3 +144,7 @@ vite.config.ts.timestamp-*
 
 # Packages
 package-lock.json
+
+# Migrate Mongo
+migrate-mongo-config.js
+migrations/

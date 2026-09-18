@@ -11,8 +11,21 @@
     <div class="card">
       <h1>Welcome, Baker!</h1>
       <p style="font-size: 0.9rem; color: #a0a0a0;">Enter your name to start baking:</p>
+      
       <form id="baker-form">
-        <input type="text" id="baker-name-input" class="modal-input" placeholder="e.g. Master Sourdough" maxlength="20" required autocomplete="off" />
+        <input 
+          type="text" 
+          id="baker-name-input" 
+          class="modal-input" 
+          placeholder="e.g. Master Sourdough" 
+          maxlength="20" 
+          required 
+          autocomplete="off" 
+        />
+        
+        <!-- Container for explicit validation feedback -->
+        <div id="auth-error-message" class="error-text hidden"></div>
+
         <button type="submit">Start Baking</button>
       </form>
       <button type="button" id="anon-bake-btn" class="btn-secondary">Bake Anonymously</button>

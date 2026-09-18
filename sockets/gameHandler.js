@@ -1,5 +1,7 @@
 const GameState = require('../models/GameState');
 const User = require('../models/User');
+const validator = require('validator');
+const { Filter } = require('bad-words');
 
 const cache = {
   activePlayers: {},
@@ -23,6 +25,37 @@ function getTopTenLeaderboard() {
     .map(([bakerName, breadBaked]) => ({ bakerName, breadBaked }))
     .sort((a, b) => b.breadBaked - a.breadBaked)
     .slice(0, 10);
+}
+
+const filter = new Filter();
+
+function validateBakerName(rawName) {
+  if (!rawName || typeof rawName !== 'string') {
+    return 'Name is required.';
+  }
+
+  const cleanName = rawName.trim();
+
+  if (cleanName.length < 2) {
+    return 'Baker name must be at least 2 characters long.';
+  }
+
+  if (cleanName.length > 20) {
+    return 'Baker name cannot exceed 20 characters.';
+  }
+
+  // Whitelist: letters, numbers, spaces, underscores, and hyphens only
+  const allowedPattern = /^[a-zA-Z0-9 _-]+$/;
+  if (!allowedPattern.test(cleanName)) {
+    return 'Names can only contain letters, numbers, spaces, underscores, and hyphens.';
+  }
+
+  // Profanity check
+  if (filter.isProfane(cleanName)) {
+    return 'Please choose a family-friendly baker name!';
+  }
+
+  return null;
 }
 
 module.exports = (io) => {
@@ -91,10 +124,23 @@ module.exports = (io) => {
     cache.activePlayers[socket.id] = { joinedAt: new Date(), bakerName: null, clicks: 0 };
 
     socket.on('auth:baker', async (data) => {
-      const name = data.bakerName ? data.bakerName.trim() : 'Anonymous Baker';
-      if (cache.activePlayers[socket.id]) cache.activePlayers[socket.id].bakerName = name;
+      const rawName = data?.bakerName;
+      
+      // 1. Validate Input
+      const validationError = validateBakerName(rawName);
+      
+      // 2. Reject if invalid
+      if (validationError) {
+        return socket.emit('auth:error', { message: validationError });
+      }
 
-      // Ensure user exists in memory cache
+      const name = rawName.trim();
+
+      // 3. Proceed only when completely valid
+      if (cache.activePlayers[socket.id]) {
+        cache.activePlayers[socket.id].bakerName = name;
+      }
+
       if (cache.leaderboard[name] === undefined) {
         cache.leaderboard[name] = 0;
       }
@@ -105,12 +151,10 @@ module.exports = (io) => {
         { upsert: true, returnDocument: 'after' }
       );
 
-      // Sync memory score if database had existing score not caught on boot
       cache.leaderboard[name] = user.breadBaked || cache.leaderboard[name] || 0;
 
+      // Emit success
       socket.emit('auth:success', { bakerName: user.bakerName, userBreadBaked: user.breadBaked });
-      
-      // Update top ten in case the logging-in user joins the board
       io.emit('leaderboard:update', getTopTenLeaderboard());
     });
 

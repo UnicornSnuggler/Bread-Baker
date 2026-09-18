@@ -215,3 +215,9 @@ button:active {
     transform: translateY(0);
     background-color: rgba(245, 158, 11, 0.15);
 }
+
+#auth-error-message {
+    color: lightcoral;
+    font-size: 0.9rem;
+    margin: 1rem 0;
+}

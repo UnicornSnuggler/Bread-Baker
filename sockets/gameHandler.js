@@ -46,7 +46,7 @@ const cache = {
 // Fast RAM leaderboard sorter
 function getTopTenLeaderboard() {
   return Object.values(cache.userStates)
-    .sort((a, b) => (b.breadBaked || b.personalBread || 0) - (a.breadBaked || a.personalBread || 0))
+    .sort((a, b) => (b.stats.breadBakedAllTime) - (a.stats.breadBakedAllTime))
     .slice(0, 10);
 }
 

@@ -21,7 +21,7 @@ body {
     flex-wrap: wrap;
     justify-content: center;
     align-items: flex-start;
-    max-width: 800px;
+    max-width: 1200px;
     width: 100%;
 }
 
@@ -33,6 +33,26 @@ body {
     text-align: center;
     width: 320px;
     box-sizing: border-box;
+    will-change: transform, opacity;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.pop-in {
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.8) translateY(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 h1 {
@@ -81,6 +101,13 @@ button:active {
     background-color: #d97706;
 }
 
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+  pointer-events: none;
+}
+
 .status {
     margin-top: 1.5rem;
     font-size: 0.85rem;
@@ -97,8 +124,8 @@ button:active {
 }
 
 .baker-greeting {
-    font-size: 0.9rem;
-    color: #f59e0b;
+    font-size: 1.8rem;
+    color: #fbdda8;
     margin-bottom: 0.5rem;
 }
 

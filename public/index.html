@@ -35,28 +35,38 @@
   <div class="app-container">
     <!-- Main Bakery Card -->
     <div class="card">
-      <div id="baker-display" class="baker-greeting"></div>
-      <h1>Shared Bakery</h1>
-      
-      <div class="counter-label">Bread Baked Globally</div>
-      <div id="global-bread-count" class="counter">0</div>
-      
-      <div class="counter-label">Bread You've Baked</div>
-      <div id="personal-bread-count" class="counter-secondary">0</div>
+      <h1 id="baker-display"></h1>
+
+      <div class="counter-label">Bread</div>
+      <div id="current-bread-count" class="counter">0</div>
       
       <button id="bake-button">🍞 Bake Bread</button>
+    </div>
 
-      <div class="status">
-        <span class="badge"></span>
-        <span id="player-count">1</span> <span id="baker-label">Baker</span> Online
+    <div id="market-card" class="card hidden">
+      <h1>Market Stall</h1>
+      <div class="counter-display">
+        <div class="counter-label">Credits</div>
+        <div id="credits-count" class="counter">0</div>
       </div>
+      <button id="sell-button" class="btn-primary">💵 Sell Bread</button>
     </div>
 
     <!-- Leaderboard Card -->
     <div class="card">
+      <div class="counter-label">Bread Baked Globally</div>
+      <div id="global-bread-count" class="counter">0</div>
+
+      <div class="counter-label">Your Bread Baked (All-Time)</div>
+      <div id="personal-bread-count" class="counter">0</div>
+
       <h1>Top Bakers</h1>
       <div id="leaderboard-list" class="leaderboard-list">
         <!-- Leaderboard items rendered dynamically -->
+      </div>
+      <div class="status">
+        <span class="badge"></span>
+        <span id="player-count">1</span> <span id="baker-label">Baker</span> Online
       </div>
     </div>
   </div>

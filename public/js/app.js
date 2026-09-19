@@ -1,4 +1,4 @@
-import { getCookie, setCookie } from './utils.js';
+import { getCookie, setCookie, resolveMultiplierQuantity } from './utils.js';
 import { renderLeaderboard } from './leaderboard.js';
 
 const socket = io();
@@ -25,12 +25,20 @@ const DOM = {
   ovenProgressWrapper: document.getElementById('oven-progress-wrapper'),
   ovenProgressBar: document.getElementById('oven-progress-bar'),
   ovenCount: document.getElementById('oven-count'),
-  ovenRate: document.getElementById('oven-rate')
+  ovenRate: document.getElementById('oven-rate'),
+  sellMultiplierGroup: document.getElementById('sell-multiplier-group'),
+  ovenMultiplierGroup: document.getElementById('oven-multiplier-group')
 };
 
 let cache = {
   globalBread: 0,
   user: {}
+};
+
+// State tracking for selected multipliers
+let selectedMultipliers = {
+  sell: '1',
+  oven: '1'
 };
 
 let ovenInterval = null;
@@ -45,17 +53,41 @@ function checkUnlockThresholds() {
     DOM.marketCard.classList.add('pop-in');
   }
   
-  DOM.sellButton.disabled = (cache.user.inventory?.bread || 0) < 1;
+  // Calculate required amount based on sell multiplier
+  const userBread = cache.user.inventory?.bread || 0;
+  const sellBatch = resolveMultiplierQuantity(selectedMultipliers.sell, userBread, 1);
+  DOM.sellButton.disabled = userBread < 1 || (selectedMultipliers.sell !== 'max' && userBread < sellBatch.quantity);
 
   // Reveal Buy Oven button when user has 10 credits earned (all time)
   if (creditsEarned >= 10 && DOM.buyOvenButton.classList.contains('hidden')) {
     DOM.buyOvenButton.classList.remove('hidden');
     DOM.buyOvenButton.classList.add('pop-in');
+    DOM.ovenMultiplierGroup.classList.remove('hidden');
+    DOM.ovenMultiplierGroup.classList.add('pop-in');
   }
   
-  DOM.buyOvenButton.disabled = (cache.user.currency?.credits || 0) < 10;
+  const userCredits = cache.user.currency?.credits || 0;
+  const ovenBatch = resolveMultiplierQuantity(selectedMultipliers.oven, userCredits, 10);
+  DOM.buyOvenButton.disabled = userCredits < 10 || (selectedMultipliers.oven !== 'max' && userCredits < ovenBatch.totalCost);
   
   syncOvenLoop();
+}
+
+function setupMultiplierListeners(groupElement, targetType) {
+  if (!groupElement) return;
+
+  groupElement.addEventListener('click', (e) => {
+    const btn = e.target.closest('.multiplier-btn');
+    if (!btn) return;
+
+    // Toggle active UI state
+    groupElement.querySelectorAll('.multiplier-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Update active multiplier state
+    selectedMultipliers[targetType] = btn.dataset.multiplier;
+    checkUnlockThresholds();
+  });
 }
 
 function syncOvenLoop() {
@@ -121,6 +153,10 @@ function authenticateBaker(name) {
 function dispatchGameAction(actionKey, payloadData = {}) {
   socket.emit('game:action', { actionKey, ...payloadData });
 }
+
+// Bind multiplier bar interactions
+setupMultiplierListeners(DOM.sellMultiplierGroup, 'sell');
+setupMultiplierListeners(DOM.ovenMultiplierGroup, 'oven');
 
 const existingBakerName = getCookie('bakerName');
 
@@ -223,18 +259,29 @@ DOM.bakeButton?.addEventListener('click', () => {
 });
 
 DOM.sellButton?.addEventListener('click', () => {
-  cache.user.inventory.bread -= 1;
+  const userBread = cache.user.inventory?.bread || 0;
+  const batch = resolveMultiplierQuantity(selectedMultipliers.sell, userBread, 1);
+
+  if (userBread < batch.quantity) return;
+
+  cache.user.inventory.bread -= batch.quantity;
   DOM.currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
 
-  cache.user.currency.credits += 1;
+  cache.user.currency.credits += batch.quantity;
   DOM.creditsCounter.textContent = cache.user.currency.credits.toLocaleString();
 
-  cache.user.stats.creditsEarnedAllTime += 1;
-  cache.user.stats.creditsEarnedThisIteration += 1;
+  cache.user.stats.creditsEarnedAllTime += batch.quantity;
+  cache.user.stats.creditsEarnedThisIteration += batch.quantity;
 
-  dispatchGameAction('action:sell');
+  dispatchGameAction('action:sell', { multiplier: selectedMultipliers.sell, quantity: batch.quantity });
+  checkUnlockThresholds();
 });
 
 DOM.buyOvenButton?.addEventListener('click', () => {
-  dispatchGameAction('action:buy_oven');
+  const userCredits = cache.user.currency?.credits || 0;
+  const batch = resolveMultiplierQuantity(selectedMultipliers.oven, userCredits, 10);
+
+  if (userCredits < batch.totalCost) return;
+
+  dispatchGameAction('action:buy_oven', { multiplier: selectedMultipliers.oven, quantity: batch.quantity });
 });

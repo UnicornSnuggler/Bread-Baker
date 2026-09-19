@@ -37,7 +37,16 @@
       
       <button id="bake-button">🍞 Bake Bread</button>
 
-      <button id="buy-oven-button" class="btn-secondary hidden" style="margin-top: 0.75rem; width: 100%;">⚡Buy Oven</button>
+      <!-- Multiplier selector for Buying Ovens -->
+      <div class="multiplier-group hidden" id="oven-multiplier-group">
+        <button type="button" class="multiplier-btn active" data-multiplier="1">x1</button>
+        <button type="button" class="multiplier-btn" data-multiplier="10">x10</button>
+        <button type="button" class="multiplier-btn" data-multiplier="100">x100</button>
+        <button type="button" class="multiplier-btn" data-multiplier="1000">x1k</button>
+        <button type="button" class="multiplier-btn" data-multiplier="max">Max</button>
+      </div>
+
+      <button id="buy-oven-button" class="btn-secondary hidden" style="margin-top: 0.5rem; width: 100%;">⚡Buy Oven</button>
   
       <div id="oven-progress-wrapper" class="progress-wrapper hidden">
         <div id="oven-progress-container" class="progress-container">
@@ -55,6 +64,16 @@
         <div class="counter-label">Credits</div>
         <div id="credits-count" class="counter">0</div>
       </div>
+
+      <!-- Multiplier selector for Selling Bread -->
+      <div class="multiplier-group" id="sell-multiplier-group">
+        <button type="button" class="multiplier-btn active" data-multiplier="1">x1</button>
+        <button type="button" class="multiplier-btn" data-multiplier="10">x10</button>
+        <button type="button" class="multiplier-btn" data-multiplier="100">x100</button>
+        <button type="button" class="multiplier-btn" data-multiplier="1000">x1k</button>
+        <button type="button" class="multiplier-btn" data-multiplier="max">Max</button>
+      </div>
+
       <button id="sell-button" class="btn-primary">💵 Sell Bread</button>
     </div>
 

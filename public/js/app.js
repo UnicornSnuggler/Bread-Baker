@@ -1,4 +1,4 @@
-import { getCookie, setCookie, resolveMultiplierQuantity } from './utils.js';
+import { getCookie, setCookie, resolveMultiplierQuantity, formatNumber } from './utils.js';
 import { renderLeaderboard } from './leaderboard.js';
 
 const socket = io();
@@ -96,8 +96,8 @@ function syncOvenLoop() {
   if (ovenCount > 0) {
     DOM.ovenProgressWrapper?.classList.remove('hidden');
 
-    DOM.ovenCount.textContent = ovenCount.toLocaleString();
-    DOM.ovenRate.textContent = ovenCount.toLocaleString();
+    DOM.ovenCount.textContent = formatNumber(ovenCount);
+    DOM.ovenRate.textContent = formatNumber(ovenCount);
 
     if (!ovenInterval) {
       startOvenLoop();
@@ -129,14 +129,14 @@ function startOvenLoop() {
 
 function triggerBake(quantity, isManual = false) {
   cache.user.inventory.bread += quantity;
-  DOM.currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
+  DOM.currentBreadCounter.textContent = formatNumber(cache.user.inventory.bread);
 
   cache.globalBread += quantity;
-  DOM.globalBreadCounter.textContent = cache.globalBread.toLocaleString();
+  DOM.globalBreadCounter.textContent = formatNumber(cache.globalBread);
 
   cache.user.stats.breadBakedAllTime += quantity;
   cache.user.stats.breadBakedThisIteration += quantity;
-  DOM.personalBreadCounter.textContent = cache.user.stats.breadBakedAllTime.toLocaleString();
+  DOM.personalBreadCounter.textContent = formatNumber(cache.user.stats.breadBakedAllTime);
 
   dispatchGameAction('action:bake', { quantity });
 }
@@ -188,10 +188,10 @@ socket.on('auth:success', (data) => {
 
   DOM.bakerDisplay.textContent = `${cache.user.bakerName}'s Bakery`;
 
-  DOM.currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
-  DOM.personalBreadCounter.textContent = cache.user.stats.breadBakedAllTime.toLocaleString();
+  DOM.currentBreadCounter.textContent = formatNumber(cache.user.inventory.bread);
+  DOM.personalBreadCounter.textContent = formatNumber(cache.user.stats.breadBakedAllTime);
 
-  DOM.creditsCounter.textContent = cache.user.currency.credits.toLocaleString();
+  DOM.creditsCounter.textContent = formatNumber(cache.user.currency.credits);
   
   checkUnlockThresholds();
 
@@ -205,7 +205,7 @@ socket.on('auth:success', (data) => {
 
 socket.on('init:state', (data) => {
   cache.globalBread = data.breadCount;
-  DOM.globalBreadCounter.textContent = cache.globalBread.toLocaleString();
+  DOM.globalBreadCounter.textContent = formatNumber(cache.globalBread);
 
   DOM.playerCount.textContent = data.activePlayers;
   DOM.bakerLabel.textContent = `Baker${data.activePlayers > 1 ? 's' : ''}`;
@@ -218,15 +218,15 @@ socket.on('presence:update', (data) => {
 
 socket.on('state:update', (data) => {
   cache.globalBread = data.breadCount;
-  DOM.globalBreadCounter.textContent = cache.globalBread.toLocaleString();
+  DOM.globalBreadCounter.textContent = formatNumber(cache.globalBread);
 });
 
 socket.on('personal:update', (data) => {
   cache.user = data;
   
-  DOM.currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
-  DOM.personalBreadCounter.textContent = cache.user.stats.breadBakedAllTime.toLocaleString();
-  DOM.creditsCounter.textContent = cache.user.currency.credits.toLocaleString();
+  DOM.currentBreadCounter.textContent = formatNumber(cache.user.inventory.bread);
+  DOM.personalBreadCounter.textContent = formatNumber(cache.user.stats.breadBakedAllTime);
+  DOM.creditsCounter.textContent = formatNumber(cache.user.currency.credits);
 
   checkUnlockThresholds();
 });
@@ -265,10 +265,10 @@ DOM.sellButton?.addEventListener('click', () => {
   if (userBread < batch.quantity) return;
 
   cache.user.inventory.bread -= batch.quantity;
-  DOM.currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
+  DOM.currentBreadCounter.textContent = formatNumber(cache.user.inventory.bread);
 
   cache.user.currency.credits += batch.quantity;
-  DOM.creditsCounter.textContent = cache.user.currency.credits.toLocaleString();
+  DOM.creditsCounter.textContent = formatNumber(cache.user.currency.credits);
 
   cache.user.stats.creditsEarnedAllTime += batch.quantity;
   cache.user.stats.creditsEarnedThisIteration += batch.quantity;

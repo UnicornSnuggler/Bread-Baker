@@ -18,11 +18,19 @@ export function getCookie(name) {
 }
 
 /**
+ * Safe number formatter
+ */
+export function formatNumber(num, decimals = 2) {
+  const val = Number(num);
+  
+  if (Math.abs(val) >= 1e9)
+    return val.toExponential(decimals);
+  else 
+    return val.toLocaleString();
+}
+
+/**
  * Calculates the quantity and total cost when buying/selling in batches or max amount.
- * @param {string|number} multiplier - '1', '10', '100', '1000', or 'max'
- * @param {number} availableResource - Current balance (bread for selling, credits for buying)
- * @param {number} unitCost - Base cost per item (e.g. 1 bread per sale, or base cost for upgrades)
- * @returns {{ quantity: number, totalCost: number }}
  */
 export function resolveMultiplierQuantity(multiplier, availableResource, unitCost = 1) {
   if (multiplier === 'max') {

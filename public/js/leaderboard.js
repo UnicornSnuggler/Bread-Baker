@@ -1,4 +1,4 @@
-import { escapeHtml } from './utils.js';
+import { escapeHtml, formatNumber } from './utils.js';
 
 export function renderLeaderboard(data, leaderboardList) {
   if (!data || data.length === 0) {
@@ -23,7 +23,7 @@ export function renderLeaderboard(data, leaderboardList) {
     <div class="leaderboard-item" data-name="${escapeHtml(user.bakerName)}" data-rank="${index}">
       <span class="leaderboard-rank">#${index + 1}</span>
       <span class="leaderboard-name">${escapeHtml(user.bakerName)}</span>
-      <span class="leaderboard-score">${(user.stats.breadBakedAllTime || 0).toLocaleString()}</span>
+      <span class="leaderboard-score">${formatNumber(user.stats.breadBakedAllTime)}</span>
     </div>
   `).join('');
 

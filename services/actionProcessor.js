@@ -33,7 +33,7 @@ function processAction(actionKey, playerState) {
     playerState.stats[stat] = (playerState.stats[stat] || 0) + amount;
   }
 
-  return { success: true, updatedState: playerState };
+  return { success: true, updatedState: playerState, isGlobal: config.isGlobal };
 }
 
 module.exports = { processAction };

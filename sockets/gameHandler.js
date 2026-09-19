@@ -3,47 +3,36 @@ const GameState = require('../models/GameState');
 const User = require('../models/User');
 const { processAction } = require('../services/actionProcessor');
 
-const filter = new Filter();
-
-// Formal server-side validation rules
 function validateBakerName(rawName) {
-  if (!rawName || typeof rawName !== 'string') {
+  if (!rawName || typeof rawName !== 'string')
     return 'Name is required.';
-  }
 
-  const cleanName = rawName.trim();
+  const cleanName = rawName.trim(),
+    allowedPattern = /^[a-zA-Z0-9 _-]+$/,
+    filter = new Filter();
 
-  if (cleanName.length < 2) {
+  if (cleanName.length < 2)
     return 'Baker name must be at least 2 characters long.';
-  }
 
-  if (cleanName.length > 20) {
+  if (cleanName.length > 20)
     return 'Baker name cannot exceed 20 characters.';
-  }
 
-  // Whitelist: letters, numbers, spaces, underscores, hyphens
-  const allowedPattern = /^[a-zA-Z0-9 _-]+$/;
-  if (!allowedPattern.test(cleanName)) {
+  if (!allowedPattern.test(cleanName))
     return 'Names can only contain letters, numbers, spaces, underscores, and hyphens.';
-  }
 
-  // Profanity check
-  if (filter.isProfane(cleanName)) {
-    return 'Please choose a family-friendly baker name!';
-  }
+  if (filter.isProfane(cleanName))
+    return 'Please choose a family-friendly baker name, you heathen...';
 
-  return null; // Valid input
+  return null;
 }
 
-// In-memory RAM storage
 const cache = {
-  userStates: {},               // Full state per bakerName
-  pendingDirtyUsers: new Set(), // Modified names needing DB write
+  userStates: {},
+  pendingDirtyUsers: new Set(),
   globalBread: 0,
   pendingGlobalClicks: 0
 };
 
-// Fast RAM leaderboard sorter
 function getTopTenLeaderboard() {
   return Object.values(cache.userStates)
     .sort((a, b) => (b.stats.breadBakedAllTime) - (a.stats.breadBakedAllTime))
@@ -51,7 +40,6 @@ function getTopTenLeaderboard() {
 }
 
 module.exports = (io) => {
-  // 1. Boot Hydration: Load DB state into Node RAM
   (async () => {
     try {
       const globalState = await GameState.findOne({ key: 'global_state' });
@@ -66,7 +54,6 @@ module.exports = (io) => {
     }
   })();
 
-  // 2. Periodic Database Writer (Every 2 Seconds)
   setInterval(async () => {
     try {
       if (cache.pendingGlobalClicks > 0) {
@@ -97,32 +84,27 @@ module.exports = (io) => {
     }
   }, 2000);
 
-  // 3. Socket Handlers
   io.on('connection', (socket) => {
-
     socket.on('auth:baker', async (data) => {
       const rawName = data?.bakerName;
 
-      // Validate before touching cache or MongoDB[cite: 1]
       const validationError = validateBakerName(rawName);
-      if (validationError) {
-        return socket.emit('auth:error', { message: validationError }); // Explicit rejection[cite: 1]
-      }
+      if (validationError)
+        return socket.emit('auth:error', { message: validationError });
 
       const name = rawName.trim();
       socket.bakerName = name;
 
-      // Load or initialize user in cache
       if (!cache.userStates[name]) {
         const userDoc = await User.findOneAndUpdate(
           { bakerName: name },
           { $set: { lastSeen: new Date() } },
           { upsert: true, returnDocument: 'after' }
         ).lean();
+
         cache.userStates[name] = userDoc;
       }
 
-      // Emit success and send state payloads[cite: 1]
       socket.emit('auth:success', cache.userStates[name]);
 
       socket.emit('init:state', {
@@ -133,11 +115,12 @@ module.exports = (io) => {
       io.emit('leaderboard:update', getTopTenLeaderboard());
     });
 
-    // Gateway for data-driven game actions
     socket.on('game:action', (payload) => {
       const bakerName = socket.bakerName;
       const userState = cache.userStates[bakerName];
-      if (!userState) return;
+
+      if (!userState)
+        return;
 
       const result = processAction(payload.actionKey, userState);
 
@@ -147,6 +130,7 @@ module.exports = (io) => {
         if (result.isGlobal) {
           cache.globalBread += 1;
           cache.pendingGlobalClicks += 1;
+          
           io.emit('state:update', { breadCount: cache.globalBread, bakedBy: bakerName });
         }
 

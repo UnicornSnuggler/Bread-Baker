@@ -3,22 +3,24 @@ import { renderLeaderboard } from './leaderboard.js';
 
 const socket = io();
 
-const currentBreadCounter = document.getElementById('current-bread-count'),
-  globalBreadCounter = document.getElementById('global-bread-count'),
-  personalBreadCounter = document.getElementById('personal-bread-count'),
-  playerCount = document.getElementById('player-count'),
-  bakerLabel = document.getElementById('baker-label'),
-  bakeButton = document.getElementById('bake-button'),
-  bakerModal = document.getElementById('baker-modal'),
-  bakerForm = document.getElementById('baker-form'),
-  bakerInput = document.getElementById('baker-name-input'),
-  bakerDisplay = document.getElementById('baker-display'),
-  leaderboardList = document.getElementById('leaderboard-list'),
-  anonBakeBtn = document.getElementById('anon-bake-btn'),
-  authErrorMessage = document.getElementById('auth-error-message'),
-  marketCard = document.getElementById('market-card'),
-  creditsCounter = document.getElementById('credits-count'),
-  sellButton = document.getElementById('sell-button');
+const DOM = {
+  currentBreadCounter: document.getElementById('current-bread-count'),
+  globalBreadCounter: document.getElementById('global-bread-count'),
+  personalBreadCounter: document.getElementById('personal-bread-count'),
+  playerCount: document.getElementById('player-count'),
+  bakerLabel: document.getElementById('baker-label'),
+  bakeButton: document.getElementById('bake-button'),
+  bakerModal: document.getElementById('baker-modal'),
+  bakerForm: document.getElementById('baker-form'),
+  bakerInput: document.getElementById('baker-name-input'),
+  bakerDisplay: document.getElementById('baker-display'),
+  leaderboardList: document.getElementById('leaderboard-list'),
+  anonBakeBtn: document.getElementById('anon-bake-btn'),
+  authErrorMessage: document.getElementById('auth-error-message'),
+  marketCard: document.getElementById('market-card'),
+  creditsCounter: document.getElementById('credits-count'),
+  sellButton: document.getElementById('sell-button')
+};
 
 let cache = {
   globalBread: 0,
@@ -26,18 +28,18 @@ let cache = {
 };
 
 function checkUnlockThresholds() {
-  if (cache.user.stats.breadBakedAllTime >= 10 && marketCard.classList.contains('hidden')) {
-    marketCard.classList.remove('hidden');
-    marketCard.classList.add('pop-in');
+  if (cache.user.stats.breadBakedAllTime >= 10 && DOM.marketCard.classList.contains('hidden')) {
+    DOM.marketCard.classList.remove('hidden');
+    DOM.marketCard.classList.add('pop-in');
   }
   
-  sellButton.disabled = cache.user.inventory.bread < 1;
+  DOM.sellButton.disabled = cache.user.inventory.bread < 1;
 }
 
 function authenticateBaker(name) {
-  if (authErrorMessage) {
-    authErrorMessage.textContent = '';
-    authErrorMessage.classList.add('hidden');
+  if (DOM.authErrorMessage) {
+    DOM.authErrorMessage.textContent = '';
+    DOM.authErrorMessage.classList.add('hidden');
   }
 
   socket.emit('auth:baker', { bakerName: name });
@@ -50,7 +52,7 @@ function dispatchGameAction(actionKey) {
 const existingBakerName = getCookie('bakerName');
 
 if (!existingBakerName) {
-  bakerModal.classList.remove('hidden');
+  DOM.bakerModal.classList.remove('hidden');
 }
 
 socket.on('connect', () => {
@@ -61,34 +63,13 @@ socket.on('connect', () => {
   }
 });
 
-bakerForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-
-  const name = bakerInput.value.trim();
-  
-  if (name) {
-    authenticateBaker(name);
-  }
-});
-
-if (anonBakeBtn) {
-  anonBakeBtn.addEventListener('click', () => {
-    bakerModal.classList.add('hidden');
-
-    if (authErrorMessage) {
-      authErrorMessage.textContent = '';
-      authErrorMessage.classList.add('hidden');
-    }
-  });
-}
-
 socket.on('auth:error', (data) => {
-  if (authErrorMessage) {
-    authErrorMessage.textContent = data.message || 'Invalid baker name.';
-    authErrorMessage.classList.remove('hidden');
+  if (DOM.authErrorMessage) {
+    DOM.authErrorMessage.textContent = data.message || 'Invalid baker name.';
+    DOM.authErrorMessage.classList.remove('hidden');
   }
 
-  bakerModal.classList.remove('hidden');
+  DOM.bakerModal.classList.remove('hidden');
 });
 
 socket.on('auth:success', (data) => {
@@ -96,75 +77,93 @@ socket.on('auth:success', (data) => {
   
   cache.user = data;
 
-  bakerDisplay.textContent = `${cache.user.bakerName}'s Bakery`;
+  DOM.bakerDisplay.textContent = `${cache.user.bakerName}'s Bakery`;
 
-  currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
-  personalBreadCounter.textContent = cache.user.stats.breadBakedAllTime.toLocaleString();
+  DOM.currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
+  DOM.personalBreadCounter.textContent = cache.user.stats.breadBakedAllTime.toLocaleString();
 
-  creditsCounter.textContent = cache.user.currency.credits.toLocaleString();
+  DOM.creditsCounter.textContent = cache.user.currency.credits.toLocaleString();
   
   checkUnlockThresholds();
 
-  bakerModal.classList.add('hidden');
+  DOM.bakerModal.classList.add('hidden');
 
-  if (authErrorMessage) {
-    authErrorMessage.textContent = '';
-    authErrorMessage.classList.add('hidden');
+  if (DOM.authErrorMessage) {
+    DOM.authErrorMessage.textContent = '';
+    DOM.authErrorMessage.classList.add('hidden');
   }
 });
 
 socket.on('init:state', (data) => {
   cache.globalBread = data.breadCount;
-  globalBreadCounter.textContent = cache.globalBread.toLocaleString();
+  DOM.globalBreadCounter.textContent = cache.globalBread.toLocaleString();
 
-  playerCount.textContent = data.activePlayers;
-  bakerLabel.textContent = `Baker${data.activePlayers > 1 ? 's' : ''}`;
+  DOM.playerCount.textContent = data.activePlayers;
+  DOM.bakerLabel.textContent = `Baker${data.activePlayers > 1 ? 's' : ''}`;
 });
 
 socket.on('presence:update', (data) => {
-  playerCount.textContent = data.activePlayers;
-  bakerLabel.textContent = `Baker${data.activePlayers > 1 ? 's' : ''}`;
+  DOM.playerCount.textContent = data.activePlayers;
+  DOM.bakerLabel.textContent = `Baker${data.activePlayers > 1 ? 's' : ''}`;
 });
 
 socket.on('state:update', (data) => {
   cache.globalBread = data.breadCount;
-  globalBreadCounter.textContent = cache.globalBread.toLocaleString();
+  DOM.globalBreadCounter.textContent = cache.globalBread.toLocaleString();
 });
 
 socket.on('personal:update', (data) => {
   cache.user = data;
   
-  currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
-  personalBreadCounter.textContent = cache.user.stats.breadBakedAllTime.toLocaleString();
+  DOM.currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
+  DOM.personalBreadCounter.textContent = cache.user.stats.breadBakedAllTime.toLocaleString();
 
   checkUnlockThresholds();
 });
 
 socket.on('leaderboard:update', (data) => {
-  renderLeaderboard(data, leaderboardList);
+  renderLeaderboard(data, DOM.leaderboardList);
 });
 
-bakeButton.addEventListener('click', () => {
+DOM.bakerForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const name = DOM.bakerInput.value.trim();
+  
+  if (name) {
+    authenticateBaker(name);
+  }
+});
+
+DOM.anonBakeBtn?.addEventListener('click', () => {
+  DOM.bakerModal.classList.add('hidden');
+
+  if (DOM.authErrorMessage) {
+    DOM.authErrorMessage.textContent = '';
+    DOM.authErrorMessage.classList.add('hidden');
+  }
+});
+
+DOM.bakeButton?.addEventListener('click', () => {
   cache.user.inventory.bread += 1;
-  currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
+  DOM.currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
   
   cache.globalBread += 1;
-  globalBreadCounter.textContent = cache.globalBread.toLocaleString();
+  DOM.globalBreadCounter.textContent = cache.globalBread.toLocaleString();
 
   cache.user.stats.breadBakedAllTime += 1;
   cache.user.stats.breadBakedThisIteration += 1;
-  personalBreadCounter.textContent = cache.user.stats.breadBakedAllTime.toLocaleString();
+  DOM.personalBreadCounter.textContent = cache.user.stats.breadBakedAllTime.toLocaleString();
 
   dispatchGameAction('action:bake');
 });
 
-// Placeholder listener for sell button
-sellButton.addEventListener('click', () => {
+DOM.sellButton?.addEventListener('click', () => {
   cache.user.inventory.bread -= 1;
-  currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
+  DOM.currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
 
   cache.user.currency.credits += 1;
-  creditsCounter.textContent = cache.user.currency.credits.toLocaleString();
+  DOM.creditsCounter.textContent = cache.user.currency.credits.toLocaleString();
 
   cache.user.stats.creditsEarnedAllTime += 1;
   cache.user.stats.creditsEarnedThisIteration += 1;

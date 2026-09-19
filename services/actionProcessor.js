@@ -2,7 +2,7 @@ const actionsConfig = require('../config/gameActions');
 
 function processAction(actionKey, playerState) {
   const config = actionsConfig[actionKey];
-  
+
   if (!config) return { success: false, reason: 'Unknown action' };
 
   // 1. Validate Costs against in-memory player state
@@ -26,6 +26,11 @@ function processAction(actionKey, playerState) {
     for (const [resource, amount] of Object.entries(config.rewards[location])) {
       playerState[location][resource] = (playerState[location][resource] || 0) + amount;
     }
+  }
+
+  // 4. Increment Stats
+  for (const [stat, amount] of Object.entries(config.stats)) {
+    playerState.stats[stat] = (playerState.stats[stat] || 0) + amount;
   }
 
   return { success: true, updatedState: playerState };

@@ -23,7 +23,7 @@ export function renderLeaderboard(data, leaderboardList) {
     <div class="leaderboard-item" data-name="${escapeHtml(user.bakerName)}" data-rank="${index}">
       <span class="leaderboard-rank">#${index + 1}</span>
       <span class="leaderboard-name">${escapeHtml(user.bakerName)}</span>
-      <span class="leaderboard-score">${(user.breadBaked || 0).toLocaleString()}</span>
+      <span class="leaderboard-score">${(user.stats.breadBakedAllTime || 0).toLocaleString()}</span>
     </div>
   `).join('');
 

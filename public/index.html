@@ -37,18 +37,17 @@
     <div class="card">
       <h1 id="baker-display"></h1>
 
-      <div class="counter-label">Bread You've Baked</div>
-      <div id="personal-bread-count" class="counter">0</div>
+      <div class="counter-label">Bread</div>
+      <div id="current-bread-count" class="counter">0</div>
       
       <button id="bake-button">🍞 Bake Bread</button>
     </div>
 
-    <!-- Marketplace Card (Hidden by default) -->
     <div id="market-card" class="card hidden">
-      <h1>Marketplace</h1>
+      <h1>Market Stall</h1>
       <div class="counter-display">
-        <div class="counter-label">Current Funds</div>
-        <div id="funds-count" class="counter">0</div>
+        <div class="counter-label">Credits</div>
+        <div id="credits-count" class="counter">0</div>
       </div>
       <button id="sell-button" class="btn-primary">💵 Sell Bread</button>
     </div>
@@ -57,6 +56,9 @@
     <div class="card">
       <div class="counter-label">Bread Baked Globally</div>
       <div id="global-bread-count" class="counter">0</div>
+
+      <div class="counter-label">Your Bread Baked (All-Time)</div>
+      <div id="personal-bread-count" class="counter">0</div>
 
       <h1>Top Bakers</h1>
       <div id="leaderboard-list" class="leaderboard-list">

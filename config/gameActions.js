@@ -7,7 +7,11 @@ module.exports = {
         bread: 1
       }
     },
-    isGlobal: true // also increments global pool
+    stats: {
+        breadBakedAllTime: 1,
+        breadBakedThisIteration: 1
+    },
+    isGlobal: true
   },
   'action:sell': {
     type: 'EXCHANGE',
@@ -20,6 +24,10 @@ module.exports = {
       currency: {
         credits: 1
       }
+    },
+    stats: {
+        creditsEarnedAllTime: 1,
+        creditsEarnedThisIteration: 1
     }
   },
   'action:buy_oven': {

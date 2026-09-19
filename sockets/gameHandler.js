@@ -1,34 +1,11 @@
+const { Filter } = require('bad-words');
 const GameState = require('../models/GameState');
 const User = require('../models/User');
-const validator = require('validator');
-const { Filter } = require('bad-words');
-
-const cache = {
-  activePlayers: {},
-  leaderboard: {} // { 'BakerName': breadBaked }
-};
-
-let pendingGlobalClicks = 0;
-const pendingUserClicks = {};
-
-async function getOrCreateGameState() {
-  let state = await GameState.findOne({ key: 'global_state' });
-  if (!state) {
-    state = await GameState.create({ key: 'global_state', breadCount: 0, totalClicks: 0 });
-  }
-  return state;
-}
-
-// Helper: Convert cache.leaderboard object into sorted Top 10 array for emissions
-function getTopTenLeaderboard() {
-  return Object.entries(cache.leaderboard)
-    .map(([bakerName, breadBaked]) => ({ bakerName, breadBaked }))
-    .sort((a, b) => b.breadBaked - a.breadBaked)
-    .slice(0, 10);
-}
+const { processAction } = require('../services/actionProcessor');
 
 const filter = new Filter();
 
+// Formal server-side validation rules
 function validateBakerName(rawName) {
   if (!rawName || typeof rawName !== 'string') {
     return 'Name is required.';
@@ -44,7 +21,7 @@ function validateBakerName(rawName) {
     return 'Baker name cannot exceed 20 characters.';
   }
 
-  // Whitelist: letters, numbers, spaces, underscores, and hyphens only
+  // Whitelist: letters, numbers, spaces, underscores, hyphens
   const allowedPattern = /^[a-zA-Z0-9 _-]+$/;
   if (!allowedPattern.test(cleanName)) {
     return 'Names can only contain letters, numbers, spaces, underscores, and hyphens.';
@@ -55,137 +32,133 @@ function validateBakerName(rawName) {
     return 'Please choose a family-friendly baker name!';
   }
 
-  return null;
+  return null; // Valid input
+}
+
+// In-memory RAM storage
+const cache = {
+  userStates: {},               // Full state per bakerName
+  pendingDirtyUsers: new Set(), // Modified names needing DB write
+  globalBread: 0,
+  pendingGlobalClicks: 0
+};
+
+// Fast RAM leaderboard sorter
+function getTopTenLeaderboard() {
+  return Object.values(cache.userStates)
+    .sort((a, b) => (b.breadBaked || b.personalBread || 0) - (a.breadBaked || a.personalBread || 0))
+    .slice(0, 10);
 }
 
 module.exports = (io) => {
-  let globalBreadCount = 0;
-
-  // --- STARTUP CACHE INITIALIZATION ---
+  // 1. Boot Hydration: Load DB state into Node RAM
   (async () => {
     try {
-      // 1. Prime global bread count
-      const state = await getOrCreateGameState();
-      globalBreadCount = state.breadCount;
+      const globalState = await GameState.findOne({ key: 'global_state' });
+      if (globalState) cache.globalBread = globalState.breadCount || 0;
 
-      // 2. Load ALL users into local cache memory
-      const allUsers = await User.find({}, 'bakerName stats.breadBakedAllTime').lean();
+      const allUsers = await User.find({}).lean();
       allUsers.forEach((user) => {
-        cache.leaderboard[user.bakerName] = user.stats.breadBakedAllTime || 0;
+        cache.userStates[user.bakerName] = user;
       });
-      
-      console.log(`Loaded ${allUsers.length} bakers into memory cache.`);
     } catch (err) {
-      console.error('Error priming game cache on startup:', err);
+      console.error('Error hydrating RAM cache on startup:', err);
     }
   })();
 
-  // --- BACKGROUND DATABASE PERSISTENCE (Every 2 Seconds) ---
+  // 2. Periodic Database Writer (Every 2 Seconds)
   setInterval(async () => {
     try {
-      // Flush Global State
-      if (pendingGlobalClicks > 0) {
-        const clicksToPersist = pendingGlobalClicks;
-        pendingGlobalClicks = 0;
-
+      if (cache.pendingGlobalClicks > 0) {
+        const clicks = cache.pendingGlobalClicks;
+        cache.pendingGlobalClicks = 0;
         await GameState.findOneAndUpdate(
           { key: 'global_state' },
-          { $inc: { breadCount: clicksToPersist, totalClicks: clicksToPersist } },
+          { $inc: { breadCount: clicks, totalClicks: clicks } },
           { upsert: true }
         );
       }
 
-      // Bulk Flush User Stats
-      const usersToUpdate = Object.keys(pendingUserClicks);
-      if (usersToUpdate.length > 0) {
-        const bulkOps = usersToUpdate.map((bakerName) => {
-          const clicks = pendingUserClicks[bakerName];
-          delete pendingUserClicks[bakerName];
+      if (cache.pendingDirtyUsers.size > 0) {
+        const dirtyNames = Array.from(cache.pendingDirtyUsers);
+        cache.pendingDirtyUsers.clear();
 
-          return {
-            updateOne: {
-              filter: { bakerName },
-              update: { $inc: { 'stats.breadBakedAllTime': clicks } }
-            }
-          };
-        });
+        const bulkOps = dirtyNames.map((bakerName) => ({
+          updateOne: {
+            filter: { bakerName },
+            update: { $set: cache.userStates[bakerName] }
+          }
+        }));
 
         await User.bulkWrite(bulkOps);
       }
     } catch (err) {
-      console.error('Error flushing click buffers to MongoDB:', err);
+      console.error('Error executing background DB flush:', err);
     }
   }, 2000);
 
-
-  // --- SOCKET EVENT HANDLERS ---
-
+  // 3. Socket Handlers
   io.on('connection', (socket) => {
-    cache.activePlayers[socket.id] = { joinedAt: new Date(), bakerName: null, clicks: 0 };
 
     socket.on('auth:baker', async (data) => {
       const rawName = data?.bakerName;
-      
-      // 1. Validate Input
+
+      // Validate before touching cache or MongoDB[cite: 1]
       const validationError = validateBakerName(rawName);
-      
-      // 2. Reject if invalid
       if (validationError) {
-        return socket.emit('auth:error', { message: validationError });
+        return socket.emit('auth:error', { message: validationError }); // Explicit rejection[cite: 1]
       }
 
       const name = rawName.trim();
+      socket.bakerName = name;
 
-      // 3. Proceed only when completely valid
-      if (cache.activePlayers[socket.id]) {
-        cache.activePlayers[socket.id].bakerName = name;
+      // Load or initialize user in cache
+      if (!cache.userStates[name]) {
+        const userDoc = await User.findOneAndUpdate(
+          { bakerName: name },
+          { $set: { lastSeen: new Date() } },
+          { upsert: true, returnDocument: 'after' }
+        ).lean();
+        cache.userStates[name] = userDoc;
       }
 
-      if (cache.leaderboard[name] === undefined) {
-        cache.leaderboard[name] = 0;
-      }
+      // Emit success and send state payloads[cite: 1]
+      socket.emit('auth:success', cache.userStates[name]);
 
-      const user = await User.findOneAndUpdate(
-        { bakerName: name },
-        { $set: { 'stats.lastSeen': new Date() } },
-        { upsert: true, returnDocument: 'after' }
-      );
+      socket.emit('init:state', {
+        breadCount: cache.globalBread,
+        activePlayers: io.engine.clientsCount
+      });
 
-      cache.leaderboard[name] = user.stats.breadBakedAllTime || cache.leaderboard[name] || 0;
-
-      // Emit success
-      socket.emit('auth:success', { bakerName: user.bakerName, userBreadBaked: user.stats.breadBakedAllTime });
       io.emit('leaderboard:update', getTopTenLeaderboard());
     });
 
-    socket.on('action:bake', () => {
-      const bakerName = cache.activePlayers[socket.id]?.bakerName;
-      if (cache.activePlayers[socket.id]) cache.activePlayers[socket.id].clicks += 1;
+    // Gateway for data-driven game actions
+    socket.on('game:action', (payload) => {
+      const bakerName = socket.bakerName;
+      const userState = cache.userStates[bakerName];
+      if (!userState) return;
 
-      globalBreadCount += 1;
-      pendingGlobalClicks += 1;
+      const result = processAction(payload.actionKey, userState);
 
-      if (bakerName) {
-        // 1. Update write buffer for DB persistence
-        pendingUserClicks[bakerName] = (pendingUserClicks[bakerName] || 0) + 1;
+      if (result.success) {
+        cache.pendingDirtyUsers.add(bakerName);
 
-        // 2. Update real-time memory cache immediately
-        cache.leaderboard[bakerName] = (cache.leaderboard[bakerName] || 0) + 1;
+        if (result.isGlobal) {
+          cache.globalBread += 1;
+          cache.pendingGlobalClicks += 1;
+          io.emit('state:update', { breadCount: cache.globalBread, bakedBy: bakerName });
+        }
+
+        socket.emit('personal:update', result.updatedState);
+        io.emit('leaderboard:update', getTopTenLeaderboard());
+      } else {
+        socket.emit('action:error', { message: result.reason });
       }
-
-      // 3. Emit instant global state and real-time sliced top-10 leaderboard
-      io.emit('state:update', { breadCount: globalBreadCount, bakedBy: bakerName || socket.id });
-      io.emit('leaderboard:update', getTopTenLeaderboard());
     });
 
     socket.on('disconnect', () => {
-      delete cache.activePlayers[socket.id];
-      io.emit('presence:update', { activePlayers: Object.keys(cache.activePlayers).length });
+      io.emit('presence:update', { activePlayers: io.engine.clientsCount });
     });
-
-    // Send initial cached state upon connection
-    socket.emit('init:state', { breadCount: globalBreadCount, activePlayers: Object.keys(cache.activePlayers).length });
-    socket.emit('leaderboard:update', getTopTenLeaderboard());
-    io.emit('presence:update', { activePlayers: Object.keys(cache.activePlayers).length });
   });
 };

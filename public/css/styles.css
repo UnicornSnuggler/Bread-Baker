@@ -101,6 +101,13 @@ button:active {
     background-color: #d97706;
 }
 
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+  pointer-events: none;
+}
+
 .status {
     margin-top: 1.5rem;
     font-size: 0.85rem;

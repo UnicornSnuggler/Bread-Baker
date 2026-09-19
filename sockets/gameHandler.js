@@ -122,14 +122,15 @@ module.exports = (io) => {
       if (!userState)
         return;
 
-      const result = processAction(payload.actionKey, userState);
+      const result = processAction(payload, userState);
 
       if (result.success) {
         cache.pendingDirtyUsers.add(bakerName);
 
         if (result.isGlobal) {
-          cache.globalBread += 1;
-          cache.pendingGlobalClicks += 1;
+          const incrementAmount = result.quantity || 1;
+          cache.globalBread += incrementAmount;
+          cache.pendingGlobalClicks += incrementAmount;
           
           io.emit('state:update', { breadCount: cache.globalBread, bakedBy: bakerName });
         }

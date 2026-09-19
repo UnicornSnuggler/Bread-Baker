@@ -248,3 +248,75 @@ button:disabled {
     font-size: 0.9rem;
     margin: 1rem 0;
 }
+
+/* Progress Bar & Tooltip Container */
+.progress-wrapper {
+  position: relative;
+  width: 100%;
+  margin-top: 0.75rem;
+  display: inline-block;
+}
+
+.progress-container {
+  width: 100%;
+  height: 12px;
+  background-color: #2a2a2a;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #333;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background-color: #f59e0b;
+  border-radius: 6px;
+  transition: width 0.05s linear;
+}
+
+/* Tooltip Styling */
+.tooltip {
+  visibility: hidden;
+  opacity: 0;
+  background-color: #2a2a2a;
+  color: #fbbf24;
+  text-align: center;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #f59e0b;
+  font-size: 0.8rem;
+  font-weight: 600;
+
+  /* Position directly above the progress bar */
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+  pointer-events: none;
+}
+
+/* Tooltip Little Arrow */
+.tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #f59e0b transparent transparent transparent;
+}
+
+/* Show Tooltip on Hover */
+.progress-wrapper:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

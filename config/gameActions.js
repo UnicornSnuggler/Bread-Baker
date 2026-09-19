@@ -41,6 +41,7 @@ module.exports = {
       upgrades: {
         oven: 1
       }
-    }
+    },
+    stats: {}
   }
 };

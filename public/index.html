@@ -36,6 +36,17 @@
       <div id="current-bread-count" class="counter">0</div>
       
       <button id="bake-button">🍞 Bake Bread</button>
+
+      <button id="buy-oven-button" class="btn-secondary hidden" style="margin-top: 0.75rem; width: 100%;">⚡Buy Oven</button>
+  
+      <div id="oven-progress-wrapper" class="progress-wrapper hidden">
+        <div id="oven-progress-container" class="progress-container">
+          <div id="oven-progress-bar" class="progress-fill"></div>
+        </div>
+        <div id="oven-tooltip" class="tooltip">
+          Your <span id="oven-count">0</span> ovens are generating <span id="oven-rate">0</span> bread per second.
+        </div>
+      </div>
     </div>
 
     <div id="market-card" class="card hidden">

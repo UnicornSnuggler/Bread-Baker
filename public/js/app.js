@@ -19,7 +19,13 @@ const DOM = {
   authErrorMessage: document.getElementById('auth-error-message'),
   marketCard: document.getElementById('market-card'),
   creditsCounter: document.getElementById('credits-count'),
-  sellButton: document.getElementById('sell-button')
+  sellButton: document.getElementById('sell-button'),
+  buyOvenButton: document.getElementById('buy-oven-button'),
+  ovenProgressContainer: document.getElementById('oven-progress-container'),
+  ovenProgressWrapper: document.getElementById('oven-progress-wrapper'),
+  ovenProgressBar: document.getElementById('oven-progress-bar'),
+  ovenCount: document.getElementById('oven-count'),
+  ovenRate: document.getElementById('oven-rate')
 };
 
 let cache = {
@@ -27,13 +33,80 @@ let cache = {
   user: {}
 };
 
+let ovenInterval = null;
+
 function checkUnlockThresholds() {
-  if (cache.user.stats.breadBakedAllTime >= 10 && DOM.marketCard.classList.contains('hidden')) {
+  const creditsEarned = cache.user.stats?.creditsEarnedAllTime || 0;
+  const breadBaked = cache.user.stats?.breadBakedAllTime || 0;
+
+  // Reveal Market Stall
+  if (breadBaked >= 10 && DOM.marketCard.classList.contains('hidden')) {
     DOM.marketCard.classList.remove('hidden');
     DOM.marketCard.classList.add('pop-in');
   }
   
-  DOM.sellButton.disabled = cache.user.inventory.bread < 1;
+  DOM.sellButton.disabled = (cache.user.inventory?.bread || 0) < 1;
+
+  // Reveal Buy Oven button when user has 10 credits earned (all time)
+  if (creditsEarned >= 10 && DOM.buyOvenButton.classList.contains('hidden')) {
+    DOM.buyOvenButton.classList.remove('hidden');
+    DOM.buyOvenButton.classList.add('pop-in');
+  }
+  
+  DOM.buyOvenButton.disabled = (cache.user.currency?.credits || 0) < 10;
+  
+  syncOvenLoop();
+}
+
+function syncOvenLoop() {
+  const ovenCount = cache.user.upgrades?.oven;
+
+  if (ovenCount > 0) {
+    DOM.ovenProgressWrapper?.classList.remove('hidden');
+
+    DOM.ovenCount.textContent = ovenCount.toLocaleString();
+    DOM.ovenRate.textContent = ovenCount.toLocaleString();
+
+    if (!ovenInterval) {
+      startOvenLoop();
+    }
+  }
+}
+
+function startOvenLoop() {
+  const duration = 1000;
+  const tickRate = 50;
+  let elapsed = 0;
+
+  ovenInterval = setInterval(() => {
+    elapsed += tickRate;
+
+    const progressPercent = Math.min((elapsed / duration) * 100, 100);
+    
+    DOM.ovenProgressBar.style.width = `${progressPercent}%`;
+
+    if (elapsed >= duration) {
+      elapsed = 0;
+
+      DOM.ovenProgressBar.style.width = '0%';
+      
+      triggerBake(cache.user.upgrades?.oven);
+    }
+  }, tickRate);
+}
+
+function triggerBake(quantity, isManual = false) {
+  cache.user.inventory.bread += quantity;
+  DOM.currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
+
+  cache.globalBread += quantity;
+  DOM.globalBreadCounter.textContent = cache.globalBread.toLocaleString();
+
+  cache.user.stats.breadBakedAllTime += quantity;
+  cache.user.stats.breadBakedThisIteration += quantity;
+  DOM.personalBreadCounter.textContent = cache.user.stats.breadBakedAllTime.toLocaleString();
+
+  dispatchGameAction('action:bake', { quantity });
 }
 
 function authenticateBaker(name) {
@@ -45,8 +118,8 @@ function authenticateBaker(name) {
   socket.emit('auth:baker', { bakerName: name });
 }
 
-function dispatchGameAction(actionKey) {
-  socket.emit('game:action', { actionKey });
+function dispatchGameAction(actionKey, payloadData = {}) {
+  socket.emit('game:action', { actionKey, ...payloadData });
 }
 
 const existingBakerName = getCookie('bakerName');
@@ -117,6 +190,7 @@ socket.on('personal:update', (data) => {
   
   DOM.currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
   DOM.personalBreadCounter.textContent = cache.user.stats.breadBakedAllTime.toLocaleString();
+  DOM.creditsCounter.textContent = cache.user.currency.credits.toLocaleString();
 
   checkUnlockThresholds();
 });
@@ -145,17 +219,7 @@ DOM.anonBakeBtn?.addEventListener('click', () => {
 });
 
 DOM.bakeButton?.addEventListener('click', () => {
-  cache.user.inventory.bread += 1;
-  DOM.currentBreadCounter.textContent = cache.user.inventory.bread.toLocaleString();
-  
-  cache.globalBread += 1;
-  DOM.globalBreadCounter.textContent = cache.globalBread.toLocaleString();
-
-  cache.user.stats.breadBakedAllTime += 1;
-  cache.user.stats.breadBakedThisIteration += 1;
-  DOM.personalBreadCounter.textContent = cache.user.stats.breadBakedAllTime.toLocaleString();
-
-  dispatchGameAction('action:bake');
+  triggerBake(1, true);
 });
 
 DOM.sellButton?.addEventListener('click', () => {
@@ -169,4 +233,8 @@ DOM.sellButton?.addEventListener('click', () => {
   cache.user.stats.creditsEarnedThisIteration += 1;
 
   dispatchGameAction('action:sell');
+});
+
+DOM.buyOvenButton?.addEventListener('click', () => {
+  dispatchGameAction('action:buy_oven');
 });

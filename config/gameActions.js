@@ -34,7 +34,7 @@ module.exports = {
     type: 'EXCHANGE',
     cost: {
       currency: {
-        credits: 50
+        credits: 10
       }
     },
     rewards: {

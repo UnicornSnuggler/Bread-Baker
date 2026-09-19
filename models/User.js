@@ -29,10 +29,10 @@ const StatsSchema = new mongoose.Schema({
 
 const UserSchema = new mongoose.Schema({
   bakerName: { type: String, required: true, unique: true },
-  stats: StatsSchema,
-  currency: CurrencySchema,
-  inventory: InventorySchema,
-  upgrades: UpgradesSchema
+  stats: { type: StatsSchema, default: () => ({}) },
+  currency: { type: CurrencySchema, default: () => ({}) },
+  inventory: { type: InventorySchema, default: () => ({}) },
+  upgrades: { type: UpgradesSchema, default: () => ({}) }
 });
 
 module.exports = mongoose.model('User', UserSchema);

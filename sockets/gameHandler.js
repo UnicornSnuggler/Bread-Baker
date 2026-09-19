@@ -99,7 +99,11 @@ module.exports = (io) => {
         const userDoc = await User.findOneAndUpdate(
           { bakerName: name },
           { $set: { lastSeen: new Date() } },
-          { upsert: true, returnDocument: 'after' }
+          {
+            upsert: true,
+            setDefaultsOnInsert: true,
+            returnDocument: 'after'
+          }
         ).lean();
 
         cache.userStates[name] = userDoc;
